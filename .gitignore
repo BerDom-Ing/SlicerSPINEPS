@@ -1,0 +1,21 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+
+# Build trees
+build/
+_build/
+*-build/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# SPINEPS model weights, if anyone points the models folder inside the checkout
+models/
+*.nii
+*.nii.gz
+*.mha

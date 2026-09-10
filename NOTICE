@@ -1,0 +1,31 @@
+SlicerSPINEPS
+Copyright 2026 Bernardo Dominguez
+
+This product includes software developed by Bernardo Dominguez.
+
+------------------------------------------------------------------------------
+Third-party software
+------------------------------------------------------------------------------
+
+This extension does not bundle third-party source. It installs the following at
+runtime from PyPI, and adapts code from the projects noted below.
+
+SPINEPS
+  https://github.com/Hendrik-code/spineps
+  Copyright the SPINEPS authors (Hendrik Moeller et al.,
+  Technical University of Munich).
+  Licensed under the Apache License, Version 2.0.
+  Installed from PyPI at runtime; not redistributed here.
+
+SlicerNNUnet
+  https://github.com/KitwareMedical/SlicerNNUnet
+  Copyright Kitware, Inc.
+  Licensed under the Apache License, Version 2.0.
+  SlicerSPINEPSLib/InstallLogic.py and SlicerSPINEPSLib/SegmentationLogic.py are
+  adapted from this project, which in turn adapted its selective-install
+  approach from SlicerTotalSegmentator (https://github.com/lassoan/SlicerTotalSegmentator).
+
+3D Slicer
+  https://www.slicer.org
+  Licensed under the 3D Slicer License (BSD-style).
+  Used as the host application; not redistributed here.
