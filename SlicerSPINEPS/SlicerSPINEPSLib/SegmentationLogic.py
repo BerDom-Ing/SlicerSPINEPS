@@ -9,6 +9,7 @@ because CPU inference takes many minutes.
 """
 
 import os
+import re
 import sys
 from pathlib import Path
 from typing import Callable, List, Optional
@@ -18,6 +19,10 @@ import slicer
 
 from .Parameter import DERIVATIVES_FOLDER_NAME, Parameter
 from .Signal import Signal
+
+# CSI sequences emitted by `rich`. Left in the stream they show up in the log widget
+# as literal "<ESC>[0m" noise around every progress line.
+_ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
 
 #: Suffix SPINEPS uses for the final vertebra instance mask.
 SEG_VERT_PATTERN = "*seg-vert_msk.nii.gz"
@@ -207,6 +212,10 @@ class SegmentationLogic:
         overrides = {
             "PYTHONIOENCODING": "utf-8",
             "PYTHONUTF8": "1",
+            # SPINEPS prints through `rich`, which emits ANSI colour sequences even
+            # into a pipe. They are not renderable by the log widget, so ask for
+            # plain output at the source; _report() strips any that still arrive.
+            "NO_COLOR": "1",
         }
         # Pin the weights folder so downloads land somewhere predictable and can be
         # pre-seeded on machines without internet access.
@@ -292,6 +301,11 @@ class Process:
 
     @staticmethod
     def _report(stream: "qt.QByteArray", outSignal: Callable[[str], None]) -> None:
-        info = qt.QTextCodec.codecForUtfText(stream).toUnicode(stream)
+        # Decode as UTF-8 unconditionally: the child is forced to UTF-8 in
+        # _buildEnvironment(), and codecForUtfText() only recognises it from a BOM,
+        # which SPINEPS does not emit. Without a BOM it falls back to the locale
+        # codec -- cp1252 on Windows -- and renders the citation banner as mojibake.
+        info = qt.QTextCodec.codecForName("UTF-8").toUnicode(stream)
+        info = _ANSI_ESCAPE_RE.sub("", info)
         if info:
             outSignal(info)

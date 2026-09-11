@@ -4,12 +4,12 @@ project(SlicerSPINEPS)
 
 #-----------------------------------------------------------------------------
 # Extension meta-information
-set(EXTENSION_HOMEPAGE "https://github.com/GITHUB-USER/SlicerSPINEPS")
+set(EXTENSION_HOMEPAGE "https://github.com/BerDom-Ing/SlicerSPINEPS")
 set(EXTENSION_CATEGORY "Segmentation")
 set(EXTENSION_CONTRIBUTORS "Bernardo Dominguez")
 set(EXTENSION_DESCRIPTION "Whole-spine segmentation of MRI (T2w, T1w, Vibe) and CT using SPINEPS. Installs its own dependencies, including a PyTorch build matched to the machine, from a single button press.")
-set(EXTENSION_ICONURL "https://raw.githubusercontent.com/GITHUB-USER/SlicerSPINEPS/main/SlicerSPINEPS.png")
-set(EXTENSION_SCREENSHOTURLS "https://raw.githubusercontent.com/GITHUB-USER/SlicerSPINEPS/main/Screenshots/1.png")
+set(EXTENSION_ICONURL "https://raw.githubusercontent.com/BerDom-Ing/SlicerSPINEPS/main/SlicerSPINEPS.png")
+set(EXTENSION_SCREENSHOTURLS "https://raw.githubusercontent.com/BerDom-Ing/SlicerSPINEPS/main/Screenshots/1.png https://raw.githubusercontent.com/BerDom-Ing/SlicerSPINEPS/main/Screenshots/2.png https://raw.githubusercontent.com/BerDom-Ing/SlicerSPINEPS/main/Screenshots/3.png")
 # No extension dependencies on purpose. InstallLogic installs PyTorch itself, via the
 # light-the-torch package rather than the PyTorch extension, so that adding this one
 # extension and pressing "Install SPINEPS dependencies" is the entire procedure.
