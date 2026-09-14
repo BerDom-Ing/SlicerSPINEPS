@@ -255,12 +255,55 @@ Then start Slicer and press **Reinstall SPINEPS** to restore the remaining packa
 
 ## License and citation
 
-This extension is released under the **Apache License 2.0** (see [LICENSE](LICENSE)).
+**The Apache-2.0 licence in [LICENSE](LICENSE) covers the code in this repository and
+nothing else.** Three separate things travel with a SPINEPS segmentation, and they are not
+under the same terms. If your use is anything other than research, read this section.
 
-It wraps but does not include SPINEPS, which is also Apache-2.0 and is installed from PyPI
-at runtime. `InstallLogic` and `SegmentationLogic` are adapted from
+### This extension
+
+Apache License 2.0. `InstallLogic` and `SegmentationLogic` are adapted from
 [SlicerNNUnet](https://github.com/KitwareMedical/SlicerNNUnet) (Apache-2.0), which in turn
 adapted the selective-install approach from SlicerTotalSegmentator.
+
+### SPINEPS itself
+
+Apache-2.0, and **not included here** - it is installed from PyPI at runtime by the install
+button. You receive it from PyPI under its own licence, not from this repository.
+
+### The model weights
+
+**Not covered by this repository's licence, and not ours to license.** They are downloaded
+on first use from the [SPINEPS GitHub releases](https://github.com/Hendrik-code/spineps/releases),
+directly from the upstream project.
+
+The SPINEPS project does not publish a licence for the weights that is distinct from the
+Apache-2.0 licence on its repository. That is not the same as an explicit grant: trained
+weights and source code are separate artifacts, and Apache-2.0 is written for source. For
+research use this is the normal situation and not a practical concern. **For commercial or
+clinical deployment, ask the SPINEPS authors directly for written confirmation** rather
+than inferring the terms from the repository licence, and do not treat this paragraph as
+legal advice.
+
+### The training data
+
+Not distributed by SPINEPS or by this extension, and not covered by any licence here. Per
+the [SPINEPS paper](https://pmc.ncbi.nlm.nih.gov/articles/PMC11836161/), the models were
+trained on T2w sagittal MRI from the German National Cohort (NAKO, access-controlled via
+its own application process), the public SPIDER dataset (CC BY 4.0), and an in-house TUM
+cohort collected under ethics approval 593/21 S-NP. None of it is redistributed, and
+nothing in this repository grants access to any of it.
+
+**Note for validation:** SPIDER subjects were used in SPINEPS' training. Do not use SPIDER
+to measure accuracy - the result will be optimistic.
+
+### Clinical use
+
+Research software. Apache-2.0 provides no warranty and no fitness-for-purpose guarantee.
+This extension is not a medical device, is not CE-marked or FDA-cleared, and every
+segmentation should be reviewed by a qualified person before it informs a clinical
+decision.
+
+### Citation
 
 If you use this module in research, please cite SPINEPS. The current citation is given in
 the [SPINEPS repository](https://github.com/Hendrik-code/spineps#citation).
