@@ -389,16 +389,16 @@ class SlicerSPINEPSTest(ScriptedLoadableModuleTest):
         args = parameter.asArgList(Path("/tmp/sub-spineps_acq-sag_T2w.nii.gz"))
 
         self.assertIn("sample", args)
-        self.assertIn("-model_semantic", args)
-        self.assertEqual(args[args.index("-model_semantic") + 1], "t2w")
+        self.assertIn("--model-semantic", args)
+        self.assertEqual(args[args.index("--model-semantic") + 1], "t2w")
         self.assertIn("-cpu", args)
         self.assertEqual(parameter.inputFileName(), "sub-spineps_acq-sag_T2w.nii.gz")
 
         # Off by default: forcing 12 thoracic vertebrae onto a patient who genuinely has
         # a transitional one is as wrong as the skip it prevents.
-        self.assertNotIn("-no_tltv_labeling", args)
+        self.assertNotIn("--enforce-12-thoracic", args)
         self.assertIn(
-            "-no_tltv_labeling",
+            "--enforce-12-thoracic",
             Parameter(semanticModel="t2w", forceTwelveThoracic=True).asArgList(
                 Path("/tmp/sub-spineps_acq-sag_T2w.nii.gz")
             ),

@@ -102,6 +102,19 @@ Two of SPINEPS' declared dependencies are corrected during install
   are unchanged across that range.
 - **`TPTBox`** - declared with no lower bound, so a resolver may pick a version too old to
   provide `np_filter_connected_components`.
+`antspyx` is installed **separately**, before that call, and excluded from it.
+
+SPINEPS pins `antspyx==0.6.3`, whose metadata caps `numpy<2.4.0`. Slicer 5.12.4 ships
+numpy 2.4.6 and numpy is pinned to Slicer's own build, so a normal resolution fails
+outright. That cap is stale rather than real: 0.6.3 imports cleanly against numpy 2.4.6
+and runs the N4 bias correction SPINEPS calls during preprocessing. So the wheel is
+installed with `--no-deps`, and its own dependencies are resolved in a second call with
+the same constraints.
+
+Dropping to the newest uncapped release instead does **not** work, and fails later and
+worse. `antspyx 0.6.1` predates `ants.utils.nibabel_nifti_to_ants`, which
+`TPTBox.NII.to_ants()` requires, so the install succeeds and the *run* dies in N4 with
+`ModuleNotFoundError`. An install-time conflict is much cheaper than that.
 
 `pytorch-lightning` and `torchmetrics` are also listed explicitly. They *are* declared by
 SPINEPS, but an earlier version of this installer stripped them from the installed
@@ -110,24 +123,49 @@ them means a machine with damaged metadata still gets a complete install.
 
 ## Known-good dependency set
 
-Verified on Slicer 5.10.0 (Python 3.12), Windows 11, RTX 3070:
+Verified on Slicer 5.12.4 (Python 3.12), Windows 11, RTX 3070:
 
 | Package | Version | Note |
 |---|---|---|
-| spineps | 2.0.0 | |
-| TPTBox | 0.8.2 | **not** the 0.3.0 a plain resolve may pick; older versions lack `np_filter_connected_components` |
-| nnunetv2 | 2.8.0 | |
+| spineps | 2.1.1 | **minimum 2.1.1** - 2.1.0 renamed every `spineps sample` option, and the old spelling makes argparse exit 2 |
+| TPTBox | 1.0.0 | **not** the 0.3.0 a plain resolve may pick; older versions lack `np_filter_connected_components` |
+| nnunetv2 | 2.8.1 | |
 | acvl-utils | **0.2.6** | overrides SPINEPS' stale `==0.2` pin |
-| torch | 2.14.0+cu126 | CUDA build; a `+cpu` build runs but is ~10x slower |
+| torch | 2.14.0+cu130 | CUDA build; a `+cpu` build runs but is ~10x slower |
 | torchmetrics | 1.9.0 | |
 | monai | 1.6.0 | |
-| antspyx | 0.4.2 | |
+| antspyx | 0.6.3 | installed with `--no-deps`; its `numpy<2.4.0` cap is stale and bypassed |
 | SimpleITK | 2.5.5 | Slicer's own build - must never be replaced |
-| numpy | 2.5.0 | Slicer's own - must never be replaced |
+| numpy | 2.4.6 | Slicer's own - must never be replaced |
 
-Two `pip check` warnings are expected and deliberate: `acvl-utils 0.2.6` against SPINEPS'
-`==0.2` pin, and `rich 15.0.0` against its `<14.0.0` pin. Both were verified against the
-symbols SPINEPS actually imports.
+An earlier set was verified on Slicer 5.10.0 with spineps 2.0.0, antspyx 0.4.2 and numpy
+2.5.0. That combination no longer installs: the current SPINEPS requires an antspyx that
+conflicts with Slicer's numpy, and speaks a different CLI.
+
+Three `pip check` warnings are expected and deliberate: `acvl-utils 0.2.6` against
+SPINEPS' `==0.2` pin, `rich` against its `<14.0.0` pin, and `antspyx 0.6.3` against its
+`numpy<2.4.0` cap. All three were verified against the symbols actually used - for
+antspyx, by importing it and running N4 bias correction under numpy 2.4.6.
+
+## End-to-end check
+
+The dependency set above was confirmed by a full run on a clean machine, not just by a
+successful install:
+
+| | |
+|---|---|
+| Slicer | 5.12.4 (Python 3.12), fresh install, nothing else added |
+| Platform | Windows 11, RTX 3070 |
+| Data | `sub-nwu01`, T2w, from the [Spine Generic Public Database](https://zenodo.org/records/4299140) |
+| Result | Both masks produced; per-vertebra labels anatomically correct |
+
+Spine Generic is a deliberate choice of test set rather than a convenient one. It is
+multi-site and multi-vendor, and - unlike SPIDER - it was **not** part of SPINEPS'
+training data, so a good result on it says something. See
+[License and citation](#the-training-data) for why that distinction matters.
+
+Reproducing it needs no configuration: download the subject, load the T2w volume, select
+it, leave every option at its default, and press **Run segmentation**.
 
 ## Model weights
 
@@ -196,7 +234,7 @@ thoracolumbar transitional anatomy (`allow_skip_at_class` in `phase_labeling.py`
 truncated field of view this is often wrong - counting up from the unambiguous sacrum
 makes the vertebra above L1 a T12.
 
-The **Assume 12 thoracic vertebrae** checkbox (`-no_tltv_labeling`) forbids the skip. It
+The **Assume 12 thoracic vertebrae** checkbox (`--enforce-12-thoracic`) forbids the skip. It
 is off by default on purpose: forcing 12 thoracic vertebrae onto a patient who genuinely
 has a variant is the same error inverted.
 

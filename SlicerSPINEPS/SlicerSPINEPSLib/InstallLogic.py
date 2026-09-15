@@ -60,6 +60,8 @@ MINIMUM_PYTHON_VERSION = (3, 12)
 #: "torch" but are ordinary dependencies that must be installed normally.
 PACKAGES_TO_SKIP = [
     "SimpleITK",
+    # Installed separately by _installAntsPyX(); see ANTSPYX_REQUIREMENT.
+    "antspyx",
     "torch",
     "torchvision",
     "torchaudio",
@@ -103,6 +105,25 @@ TORCH_PACKAGES = ["torch", "torchvision"]
 #: same mechanism the PyTorch extension uses; depending on the package directly rather
 #: than on the extension is what makes this module installable on its own.
 LIGHT_THE_TORCH_REQUIREMENT = "light-the-torch>=0.8"
+
+#: SPINEPS 2.1.0 renamed the whole ``spineps sample`` option set (``-model_semantic`` ->
+#: ``--model-semantic``, ``-no_tltv_labeling`` -> ``--enforce-12-thoracic``). Parameter
+#: emits the new spelling, so an older SPINEPS would exit 2 on every run.
+SPINEPS_REQUIREMENT = "spineps>=2.1.1"
+
+#: Installed on its own, with --no-deps, and excluded from the main resolution.
+#:
+#: SPINEPS pins ``antspyx==0.6.3``, whose metadata caps ``numpy<2.4.0``. That cap is
+#: stale: 0.6.3 imports cleanly against the numpy Slicer 5.12 ships (2.4.6) and runs the
+#: N4 bias correction SPINEPS calls during preprocessing. pip enforces it anyway, and
+#: numpy is pinned to Slicer's own build, so a normal resolution cannot succeed.
+#:
+#: Taking the newest uncapped release (0.6.1) instead does not work: it predates
+#: ``ants.utils.nibabel_nifti_to_ants``, which ``TPTBox.NII.to_ants()`` needs, so N4
+#: fails at run time with ModuleNotFoundError rather than at install time.
+#:
+#: A ``pip check`` warning about antspyx against numpy is therefore expected.
+ANTSPYX_REQUIREMENT = "antspyx==0.6.3"
 
 
 def normalizePackageName(name: str) -> str:
@@ -357,7 +378,7 @@ class InstallLogic:
     # ------------------------------------------------------------------- installing
 
     def setupPythonRequirements(
-        self, spinepsRequirement: str = "spineps", force: bool = False
+        self, spinepsRequirement: str = SPINEPS_REQUIREMENT, force: bool = False
     ) -> bool:
         """Install SPINEPS, reusing whatever PyTorch is already present.
 
@@ -542,9 +563,52 @@ class InstallLogic:
         except Exception as e:  # noqa: BLE001 - cosmetic hardening only
             logging.info(f"Could not adjust SPINEPS metadata: {e}")
 
+        self._installAntsPyX()
+
         constraintsPath = self._writeConstraintsFile()
         try:
             self._log("Installing dependencies (pip resolves these together)...")
+            self.pip_install(
+                " ".join(dependencies) + f' --constraint "{constraintsPath}"'
+            )
+        finally:
+            try:
+                os.remove(constraintsPath)
+            except OSError:
+                pass
+
+    def _installAntsPyX(self) -> None:
+        """Install antspyx alone, bypassing the stale numpy cap in its metadata.
+
+        See :data:`ANTSPYX_REQUIREMENT` for why this cannot go through the main
+        resolution. The wheel is installed with --no-deps, then its real dependencies
+        are resolved normally -- minus the ones already pinned to Slicer's builds,
+        whose requirement lines are the only reason the cap bites.
+        """
+        self._log("Installing antspyx (its stale numpy pin is bypassed)...")
+        self.pip_install(f"{ANTSPYX_REQUIREMENT} --no-deps")
+
+        pinned = {normalizePackageName(name) for name in PACKAGES_TO_PIN}
+        dependencies = []
+        for requirement in importlib.metadata.requires("antspyx") or []:
+            name = requirementName(requirement)
+            if name is None or name in pinned:
+                continue
+            # antspyx also depends on requests, which is already in Slicer and only
+            # forces a restart if reinstalled.
+            if isPackageToSkip(requirement, PACKAGES_TO_SKIP):
+                continue
+            marker = self.asRequirement(requirement).marker
+            if marker is not None and not marker.evaluate():
+                continue
+            dependencies.append(self.cleanPyPiRequirement(requirement))
+
+        if not dependencies:
+            return
+
+        constraintsPath = self._writeConstraintsFile()
+        try:
+            self._log("Installing antspyx dependencies...")
             self.pip_install(
                 " ".join(dependencies) + f' --constraint "{constraintsPath}"'
             )
@@ -630,11 +694,25 @@ class InstallLogic:
         """
         importlib.invalidate_caches()
 
-    def pip_install(self, package) -> None:
+    def pip_install(self, package, critical: bool = True) -> None:
+        """Install *package*, raising on failure unless *critical* is False.
+
+        A failed dependency resolution used to be logged and stepped over, so the run
+        continued to an unrelated "No module named 'TPTBox'" several screens later and
+        buried the pip error that actually explained it. Anything the install cannot
+        proceed without must fail here, while the pip output is still on screen.
+        """
         self._log(f"- Installing {package}...")
         try:
             slicer.util.pip_install(package)
         except CalledProcessError as e:
+            if critical:
+                raise RuntimeError(
+                    f"pip failed to install: {package}\n\n"
+                    f"{e}\n\n"
+                    "The pip output above this line gives the reason; a version conflict "
+                    "against one of Slicer's own packages is the usual cause."
+                ) from e
             self._log(f"Install returned non-zero exit status: {e}. Attempting to continue...")
         finally:
             self._refreshPackageMetadataCache()

@@ -76,7 +76,7 @@ class Parameter:
     :param instanceModel: vertebra instance segmentation model. Leave None to derive it
         from the semantic model (see :data:`SEMANTIC_MODEL_TO_COMPANION_MODELS`).
     :param labelingModel: vertebra labeling classifier. Leave None to derive it likewise.
-    :param forceTwelveThoracic: pass ``-no_tltv_labeling``, forbidding the labeling model
+    :param forceTwelveThoracic: pass ``--enforce-12-thoracic``, forbidding the labeling model
         from claiming a thoracolumbar transitional anomaly. See
         :attr:`forceTwelveThoracic` below for when to use it.
     :param useCpu: force CPU inference. When None the device is auto-detected.
@@ -149,21 +149,26 @@ class Parameter:
                 f"Expected one of {SEMANTIC_MODELS}."
             )
 
+        # SPINEPS 2.1.0 renamed every option in this subcommand from single-dash
+        # underscores (-model_semantic) to double-dash hyphens (--model-semantic), and
+        # replaced the negative -no_tltv_labeling with the positive
+        # --enforce-12-thoracic. Old-style flags make argparse exit 2 before any work
+        # happens, which is why the installer requires spineps>=2.1.1.
         args = [
             "sample",
-            "-i", Path(inputFile).as_posix(),
-            "-model_semantic", self.semanticModel,
-            "-model_instance", self.resolvedInstanceModel(),
-            "-model_labeling", self.resolvedLabelingModel(),
-            "-der_name", DERIVATIVES_FOLDER_NAME,
+            "--input", Path(inputFile).as_posix(),
+            "--model-semantic", self.semanticModel,
+            "--model-instance", self.resolvedInstanceModel(),
+            "--model-labeling", self.resolvedLabelingModel(),
+            "--derivative-name", DERIVATIVES_FOLDER_NAME,
         ]
 
         if self.forceTwelveThoracic:
-            args.append("-no_tltv_labeling")
+            args.append("--enforce-12-thoracic")
         if self.useCpu:
-            args.append("-cpu")
+            args.append("--cpu")
         if self.verbose:
-            args.append("-verbose")
+            args.append("--verbose")
 
         args.extend(self.extraArgs)
         return args
